@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Entre Deux Rives</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="lobby" class="screen">
+    <div class="card">
+      <h1>Entre Deux Rives</h1>
+      <p class="tagline">Deux cartographes. Un fleuve. Aucun mot.</p>
+
+      <div id="lobby-menu">
+        <button id="btn-create" class="big">Créer une partie</button>
+        <div class="row">
+          <input id="join-code" maxlength="4" placeholder="CODE" autocomplete="off" spellcheck="false">
+          <button id="btn-join">Rejoindre</button>
+        </div>
+        <button id="btn-quick">Partie rapide avec un inconnu</button>
+      </div>
+
+      <div id="lobby-wait" class="hidden">
+        <p id="wait-text"></p>
+        <p id="wait-code" class="code"></p>
+        <p class="small">Donnez ce code à votre partenaire. Il l’entre sur son PC, dans « Rejoindre ».</p>
+      </div>
+
+      <p id="lobby-error" class="error"></p>
+
+      <details class="rules">
+        <summary>Comment on joue</summary>
+        <ul>
+          <li><b>Déplacement :</b> flèches, ZQSD ou WASD. <b>Action :</b> Espace ou E.</li>
+          <li>Chacun voit une part du monde que l’autre ne voit pas.</li>
+          <li>Il n’y a ni chat, ni voix, ni signal. Vos mouvements sont le seul langage.</li>
+          <li><b>Acte 1 :</b> chacun sa rive. Vous voyez les pièges d’en face, jamais les vôtres.</li>
+          <li><b>Acte 2 :</b> un radeau. L’un tient la barre (gauche-droite), l’autre la perche (bas = pousser, haut = freiner).</li>
+          <li><b>Acte 3 :</b> l’un marche dans la brume, l’autre guette du haut d’une tour et bascule passerelles et vannes avec un curseur.</li>
+          <li>Jouez dans deux pièces séparées, ou sans appel vocal. C’est le serment du silence.</li>
+        </ul>
+      </details>
+    </div>
+  </div>
+
+  <div id="game" class="screen hidden">
+    <div id="hud">
+      <span id="hud-act"></span>
+      <span id="hud-title"></span>
+      <span id="hud-role"></span>
+      <span id="hud-extra"></span>
+    </div>
+    <div id="canvas-wrap"><canvas id="canvas" width="960" height="576"></canvas></div>
+  </div>
+
+  <div id="final" class="screen hidden">
+    <div class="card wide">
+      <h1>La vallée, redessinée</h1>
+      <p class="tagline">Vos deux trajets, mis bout à bout, forment la carte perdue.</p>
+      <canvas id="map-canvas" width="1200" height="900"></canvas>
+      <div class="row">
+        <a id="btn-download" class="button" download="entre-deux-rives-carte.png">Télécharger la carte</a>
+        <button id="btn-again">Rejouer</button>
+      </div>
+      <p id="final-stats" class="small"></p>
+    </div>
+  </div>
+
+  <script src="levels.js"></script>
+  <script src="sim.js"></script>
+  <script src="render.js"></script>
+  <script src="net.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>

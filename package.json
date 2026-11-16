@@ -1,0 +1,15 @@
+{
+  "name": "entre-deux-rives",
+  "version": "0.1.0",
+  "description": "Jeu coopératif pour deux joueurs sur deux PC, sans aucun mot : seuls les mouvements se comprennent.",
+  "private": true,
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test/check.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT"
+}

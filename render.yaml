@@ -1,0 +1,14 @@
+# Blueprint Render — https://dashboard.render.com/select-repo?type=blueprint
+# Un seul service web Node, sans build : le serveur n'a aucune dépendance.
+services:
+  - type: web
+    name: entre-deux-rives
+    runtime: node
+    plan: free
+    buildCommand: ""
+    startCommand: node server.js
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
