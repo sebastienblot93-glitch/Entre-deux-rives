@@ -563,6 +563,6 @@
     parseMap, tileAt, prepare, createGame, loadLevel, step, snapshot, applySnapshot,
     roleOf, indexOfRole, rockfallActive, rockfallSafeFor, quicksandRect, inRect,
     tidePhase, tideHigh, tideLowFor, channelFlooded, valveFor, toggleState, toggleNear,
-    rivesBlocked, tracesBlocked,
+    rivesBlocked, tracesBlocked, movePlayer,
   };
 });

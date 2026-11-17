@@ -93,6 +93,7 @@
     for (const k in keys) keys[k] = false;
     guestInputs = { up: false, down: false, left: false, right: false, action: false };
     lastSend = 0; acc = 0; snapTick = 0; finalSent = false; lastT = performance.now();
+    disp = null; srv = null; dispLi = -1;
     if (role === 'host') startTicker();
     requestAnimationFrame(loop);
   }
@@ -107,6 +108,7 @@
       guestInputs = { up: !!d.k[0], down: !!d.k[1], left: !!d.k[2], right: !!d.k[3], action: !!d.k[4] };
     } else if (role === 'guest' && d.t === 'st') {
       Sim.applySnapshot(g, d.s);
+      guestAfterSnapshot();
     } else if (role === 'guest' && d.t === 'final') {
       g.tracks = d.tracks;
       g.final = true;
@@ -148,7 +150,7 @@
       acc += dt;
       while (acc >= DT) { Sim.step(g, DT); acc -= DT; }
       snapTick += dt;
-      if (snapTick >= 1 / 20) {
+      if (snapTick >= 1 / 30) {
         snapTick = 0;
         net.msg({ t: 'st', s: Sim.snapshot(g) });
       }
@@ -172,11 +174,92 @@
       }
       // léger avancement local du temps pour les animations entre deux instantanés
       g.t += dt;
+      guestSmooth(dt);
       if (g.phase === 'final') { if (g.tracks.length) showFinal(); return; }
     }
     Render.draw(ctx, g, myIndex());
     updateHud();
     requestAnimationFrame(loop);
+  }
+
+  /* ---------------------------------------------------------------- */
+  /* Fluidité côté invité                                               */
+  /* ---------------------------------------------------------------- */
+  /*
+   * L'invité ne reçoit l'état que 30 fois par seconde, avec le délai d'un
+   * aller-retour réseau. Pour qu'il ne sente pas ce délai :
+   *  - il déplace lui-même son personnage (ou son curseur) tout de suite,
+   *    avec les mêmes règles de collision que l'hôte (prédiction) ;
+   *  - les autres objets glissent en douceur vers leur dernière position
+   *    connue au lieu de sauter d'un instantané à l'autre.
+   * L'hôte reste seul juge : en cas d'écart net (chute, réapparition,
+   * porte refermée), l'affichage se recale sur lui.
+   */
+  let disp = null, srv = null, dispLi = -1;
+
+  function readPos(gg) {
+    const d = gg.dyn || {};
+    return {
+      p: gg.players.map((p) => ({ x: p.x, y: p.y, dir: p.dir, moving: p.moving })),
+      c: d.cursor ? { x: d.cursor.x, y: d.cursor.y } : null,
+      r: d.raft ? { x: d.raft.x, y: d.raft.y } : null,
+    };
+  }
+
+  function writePos(gg, v) {
+    v.p.forEach((a, i) => Object.assign(gg.players[i], a));
+    if (v.c && gg.dyn.cursor) { gg.dyn.cursor.x = v.c.x; gg.dyn.cursor.y = v.c.y; }
+    if (v.r && gg.dyn.raft) gg.dyn.raft = Object.assign({}, gg.dyn.raft, { x: v.r.x, y: v.r.y });
+  }
+
+  function guestAfterSnapshot() {
+    srv = readPos(g);
+    const reset = !disp || dispLi !== g.li || g.phase !== 'play' || !!disp.c !== !!srv.c || !!disp.r !== !!srv.r;
+    if (reset) { disp = readPos(g); dispLi = g.li; return; }
+    writePos(g, disp); // on garde l'affichage lissé ; srv sert de cible
+  }
+
+  function approach(a, b, k, snapDist) {
+    const dx = b.x - a.x, dy = b.y - a.y;
+    if (Math.abs(dx) > snapDist || Math.abs(dy) > snapDist) { a.x = b.x; a.y = b.y; return; }
+    a.x += dx * k; a.y += dy * k;
+  }
+
+  function guestSmooth(dt) {
+    if (!disp || !srv || g.phase !== 'play') return;
+    const me = myIndex(), r = Sim.roleOf(g, me), L = g.L;
+    const kOther = Math.min(1, dt * 15);
+    // personnage de l'invité : prédiction
+    if (L.mode === 'rives' || r === 'marcheur') {
+      const p = disp.p[me];
+      const blocked = L.mode === 'rives'
+        ? (ch) => Sim.rivesBlocked(g, ch)
+        : (ch, tx, ty) => Sim.tracesBlocked(g, ch, tx, ty);
+      Sim.movePlayer(L, p, keys, dt, blocked);
+      const s = srv.p[me];
+      if (Math.abs(s.x - p.x) > 1.5 || Math.abs(s.y - p.y) > 1.5) { p.x = s.x; p.y = s.y; }
+      else if (!p.moving) approach(p, s, Math.min(1, dt * 6), 99);
+    } else {
+      approach(disp.p[me], srv.p[me], kOther, 2);
+      disp.p[me].dir = srv.p[me].dir; disp.p[me].moving = srv.p[me].moving;
+    }
+    // curseur du Guetteur
+    if (disp.c) {
+      if (r === 'guetteur') {
+        const c = disp.c;
+        const mx = (keys.right ? 1 : 0) - (keys.left ? 1 : 0), my = (keys.down ? 1 : 0) - (keys.up ? 1 : 0);
+        c.x = Math.max(0.5, Math.min(L.w - 0.5, c.x + mx * Sim.C.CURSOR_SPEED * dt));
+        c.y = Math.max(0.5, Math.min(L.h - 0.5, c.y + my * Sim.C.CURSOR_SPEED * dt));
+        if (Math.abs(srv.c.x - c.x) > 3 || Math.abs(srv.c.y - c.y) > 3) { c.x = srv.c.x; c.y = srv.c.y; }
+        else if (!mx && !my) approach(c, srv.c, Math.min(1, dt * 6), 99);
+      } else approach(disp.c, srv.c, kOther, 3);
+    }
+    // l'autre joueur et le radeau : glissement doux
+    const o = 1 - me;
+    approach(disp.p[o], srv.p[o], kOther, 2);
+    disp.p[o].dir = srv.p[o].dir; disp.p[o].moving = srv.p[o].moving;
+    if (disp.r) approach(disp.r, srv.r, kOther, 2);
+    writePos(g, disp);
   }
 
   const ROLE_TEXT = {
