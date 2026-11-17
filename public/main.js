@@ -93,10 +93,11 @@
     for (const k in keys) keys[k] = false;
     guestInputs = { up: false, down: false, left: false, right: false, action: false };
     lastSend = 0; acc = 0; snapTick = 0; finalSent = false; lastT = performance.now();
+    if (role === 'host') startTicker();
     requestAnimationFrame(loop);
   }
 
-  function stopGame() { running = false; g = null; }
+  function stopGame() { running = false; g = null; stopTicker(); }
 
   function myIndex() { return role === 'host' ? 0 : 1; }
 
@@ -116,11 +117,32 @@
   let acc = 0, lastT = 0, snapTick = 0, finalSent = false;
   const DT = 1 / 60;
 
-  function loop(now) {
-    if (!running || !g) return;
-    const dt = Math.min(0.1, (now - lastT) / 1000 || 0);
-    lastT = now;
-    if (role === 'host') {
+  /*
+   * La simulation de l'hôte tourne sur un minuteur de Web Worker et non sur
+   * requestAnimationFrame : quand l'onglet de l'hôte passe en arrière-plan
+   * (test à deux onglets, fenêtre réduite), le navigateur suspend
+   * requestAnimationFrame et le partenaire ne pouvait plus bouger.
+   */
+  let ticker = null, simT = 0;
+  function startTicker() {
+    stopTicker();
+    simT = performance.now();
+    try {
+      const src = 'setInterval(function(){postMessage(0)},16)';
+      ticker = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })));
+      ticker.onmessage = hostTick;
+    } catch (e) {
+      ticker = { id: setInterval(hostTick, 16), terminate() { clearInterval(this.id); } };
+    }
+  }
+  function stopTicker() { if (ticker) { ticker.terminate(); ticker = null; } }
+
+  function hostTick() {
+    if (!running || !g || role !== 'host') return stopTicker();
+    const now = performance.now();
+    const dt = Math.min(0.1, (now - simT) / 1000 || 0);
+    simT = now;
+    {
       Object.assign(g.inputs[0], keys);
       Object.assign(g.inputs[1], guestInputs);
       acc += dt;
@@ -136,7 +158,14 @@
         showFinal();
         return;
       }
-    } else {
+    }
+  }
+
+  function loop(now) {
+    if (!running || !g) return;
+    const dt = Math.min(0.1, (now - lastT) / 1000 || 0);
+    lastT = now;
+    if (role !== 'host') {
       if (keysDirty || now - lastSend > 100) {
         keysDirty = false; lastSend = now;
         net.msg({ t: 'in', k: [keys.up, keys.down, keys.left, keys.right, keys.action].map((b) => (b ? 1 : 0)) });
@@ -173,6 +202,7 @@
 
   function showFinal() {
     running = false;
+    stopTicker();
     show('final');
     const mc = $('map-canvas');
     const stats = 'Partie terminée · ' + (g.deaths || 0) + ' chute(s)';
