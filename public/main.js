@@ -13,7 +13,7 @@
   const canvas = $('canvas'), ctx = canvas.getContext('2d');
 
   let net = null, role = null, g = null, running = false;
-  let lastSend = 0, guestInputs = { up: false, down: false, left: false, right: false, action: false };
+  let guestPos = null, lastSend = 0, guestInputs = { up: false, down: false, left: false, right: false, action: false };
 
   function show(name) { for (const k in screens) screens[k].classList.toggle('hidden', k !== name); }
 
@@ -92,6 +92,7 @@
     setError('');
     for (const k in keys) keys[k] = false;
     guestInputs = { up: false, down: false, left: false, right: false, action: false };
+    guestPos = null;
     lastSend = 0; acc = 0; snapTick = 0; finalSent = false; lastT = performance.now();
     disp = null; srv = null; dispLi = -1;
     if (role === 'host') startTicker();
@@ -106,6 +107,7 @@
     if (!running || !g) return;
     if (role === 'host' && d.t === 'in') {
       guestInputs = { up: !!d.k[0], down: !!d.k[1], left: !!d.k[2], right: !!d.k[3], action: !!d.k[4] };
+      if (d.pos) guestPos = d.pos;
     } else if (role === 'guest' && d.t === 'st') {
       Sim.applySnapshot(g, d.s);
       guestAfterSnapshot();
@@ -114,6 +116,36 @@
       g.final = true;
       showFinal();
     }
+  }
+
+  /*
+   * Ce que l'invité déplace lui-même : son personnage (Rives, Marcheur) ou
+   * son curseur (Guetteur). Sur le radeau, rien : l'hôte calcule tout.
+   */
+  function guestOwns(gg) {
+    if (gg.phase !== 'play') return null;
+    const r = Sim.roleOf(gg, 1);
+    if (gg.L.mode === 'rives' || r === 'marcheur') return 'player';
+    if (r === 'guetteur') return 'cursor';
+    return null;
+  }
+
+  // L'hôte reprend la position annoncée par l'invité, si elle est plausible.
+  function applyGuestPos(pos) {
+    const what = guestOwns(g);
+    if (!what || pos.ep !== g.epoch || pos.w !== what) return;
+    const L = g.L;
+    if (what === 'cursor') {
+      g.dyn.cursor.x = Math.max(0.5, Math.min(L.w - 0.5, pos.x));
+      g.dyn.cursor.y = Math.max(0.5, Math.min(L.h - 0.5, pos.y));
+      return;
+    }
+    const p = g.players[1];
+    const ch = Sim.tileAt(L, pos.x, pos.y), tx = Math.floor(pos.x), ty = Math.floor(pos.y);
+    const blocked = L.mode === 'rives' ? Sim.rivesBlocked(g, ch) : Sim.tracesBlocked(g, ch, tx, ty);
+    const far = Math.abs(pos.x - p.x) > 3 || Math.abs(pos.y - p.y) > 3;
+    if (blocked || far) { g.epoch++; return; } // refusé : l'invité se recale sur l'hôte
+    p.x = pos.x; p.y = pos.y; p.dir = pos.dir;
   }
 
   let acc = 0, lastT = 0, snapTick = 0, finalSent = false;
@@ -147,6 +179,7 @@
     {
       Object.assign(g.inputs[0], keys);
       Object.assign(g.inputs[1], guestInputs);
+      if (guestPos) { applyGuestPos(guestPos); guestPos = null; }
       acc += dt;
       while (acc >= DT) { Sim.step(g, DT); acc -= DT; }
       snapTick += dt;
@@ -168,13 +201,19 @@
     const dt = Math.min(0.1, (now - lastT) / 1000 || 0);
     lastT = now;
     if (role !== 'host') {
-      if (keysDirty || now - lastSend > 100) {
-        keysDirty = false; lastSend = now;
-        net.msg({ t: 'in', k: [keys.up, keys.down, keys.left, keys.right, keys.action].map((b) => (b ? 1 : 0)) });
-      }
       // léger avancement local du temps pour les animations entre deux instantanés
       g.t += dt;
       guestSmooth(dt);
+      const owns = guestOwns(g);
+      if (keysDirty || now - lastSend > (owns ? 33 : 100)) {
+        keysDirty = false; lastSend = now;
+        const m = { t: 'in', k: [keys.up, keys.down, keys.left, keys.right, keys.action].map((b) => (b ? 1 : 0)) };
+        if (owns && disp) {
+          const o = owns === 'cursor' ? disp.c : disp.p[1];
+          if (o) m.pos = { w: owns, ep: g.epoch, x: +o.x.toFixed(3), y: +o.y.toFixed(3), dir: o.dir || 0 };
+        }
+        net.msg(m);
+      }
       if (g.phase === 'final') { if (g.tracks.length) showFinal(); return; }
     }
     Render.draw(ctx, g, myIndex());
@@ -215,7 +254,7 @@
   function guestAfterSnapshot() {
     srv = readPos(g);
     const reset = !disp || dispLi !== g.li || g.phase !== 'play' || !!disp.c !== !!srv.c || !!disp.r !== !!srv.r;
-    if (reset) { disp = readPos(g); dispLi = g.li; return; }
+    if (reset) { disp = readPos(g); disp.ep = g.epoch; dispLi = g.li; return; }
     writePos(g, disp); // on garde l'affichage lissé ; srv sert de cible
   }
 
@@ -229,29 +268,28 @@
     if (!disp || !srv || g.phase !== 'play') return;
     const me = myIndex(), r = Sim.roleOf(g, me), L = g.L;
     const kOther = Math.min(1, dt * 15);
-    // personnage de l'invité : prédiction
+    // ce que l'invité contrôle : il le déplace lui-même, l'hôte suit.
+    // On ne se recale sur l'hôte que s'il l'exige (réapparition, refus).
+    const resync = disp.ep !== g.epoch;
+    disp.ep = g.epoch;
     if (L.mode === 'rives' || r === 'marcheur') {
       const p = disp.p[me];
+      if (resync) { p.x = srv.p[me].x; p.y = srv.p[me].y; }
       const blocked = L.mode === 'rives'
         ? (ch) => Sim.rivesBlocked(g, ch)
         : (ch, tx, ty) => Sim.tracesBlocked(g, ch, tx, ty);
       Sim.movePlayer(L, p, keys, dt, blocked);
-      const s = srv.p[me];
-      if (Math.abs(s.x - p.x) > 1.5 || Math.abs(s.y - p.y) > 1.5) { p.x = s.x; p.y = s.y; }
-      else if (!p.moving) approach(p, s, Math.min(1, dt * 6), 99);
     } else {
       approach(disp.p[me], srv.p[me], kOther, 2);
       disp.p[me].dir = srv.p[me].dir; disp.p[me].moving = srv.p[me].moving;
     }
-    // curseur du Guetteur
     if (disp.c) {
       if (r === 'guetteur') {
         const c = disp.c;
+        if (resync) { c.x = srv.c.x; c.y = srv.c.y; }
         const mx = (keys.right ? 1 : 0) - (keys.left ? 1 : 0), my = (keys.down ? 1 : 0) - (keys.up ? 1 : 0);
         c.x = Math.max(0.5, Math.min(L.w - 0.5, c.x + mx * Sim.C.CURSOR_SPEED * dt));
         c.y = Math.max(0.5, Math.min(L.h - 0.5, c.y + my * Sim.C.CURSOR_SPEED * dt));
-        if (Math.abs(srv.c.x - c.x) > 3 || Math.abs(srv.c.y - c.y) > 3) { c.x = srv.c.x; c.y = srv.c.y; }
-        else if (!mx && !my) approach(c, srv.c, Math.min(1, dt * 6), 99);
       } else approach(disp.c, srv.c, kOther, 3);
     }
     // l'autre joueur et le radeau : glissement doux

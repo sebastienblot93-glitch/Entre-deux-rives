@@ -216,6 +216,7 @@
 
   function fullReset(g) {
     g.reveal = null;
+    g.epoch = (g.epoch || 0) + 1;
     const L = g.L;
     if (L.mode === 'rives') resetRives(g);
     else if (L.mode === 'radeau') resetRadeau(g, true);
@@ -224,6 +225,7 @@
 
   function respawn(g) {
     g.reveal = null;
+    g.epoch = (g.epoch || 0) + 1;
     const L = g.L;
     if (L.mode === 'rives') resetRives(g);
     else if (L.mode === 'radeau') resetRadeau(g, false);
@@ -535,7 +537,7 @@
   function snapshot(g) {
     const d = g.dyn, L = g.L;
     const s = {
-      li: g.li, ph: g.phase, pt: r3(g.pt), t: r3(g.t), de: g.deaths,
+      li: g.li, ph: g.phase, pt: r3(g.pt), t: r3(g.t), de: g.deaths, ep: g.epoch,
       p: g.players.map((p) => [r3(p.x), r3(p.y), p.dir, p.moving ? 1 : 0]),
       rv: g.reveal,
     };
@@ -547,7 +549,7 @@
 
   function applySnapshot(g, s) {
     if (s.li !== g.li) loadLevel(g, s.li);
-    g.phase = s.ph; g.pt = s.pt; g.t = s.t; g.deaths = s.de; g.reveal = s.rv;
+    g.phase = s.ph; g.pt = s.pt; g.t = s.t; g.deaths = s.de; g.reveal = s.rv; g.epoch = s.ep;
     if (s.ph === 'final') g.final = true;
     s.p.forEach((a, i) => { const p = g.players[i]; p.x = a[0]; p.y = a[1]; p.dir = a[2]; p.moving = !!a[3]; });
     const d = g.dyn, L = g.L;
