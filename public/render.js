@@ -171,6 +171,20 @@
   /* Rives                                                              */
   /* ---------------------------------------------------------------- */
 
+  // Grille discrète sur les cases praticables, pour mieux suivre un chemin.
+  function grid(ctx, L, y0, y1) {
+    ctx.strokeStyle = 'rgba(43,42,40,0.09)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let y = y0; y < y1; y++) for (let x = 0; x < L.w; x++) {
+      if (L.g[y][x] === '#') continue;
+      const px = x * T + 0.5, py = y * T + 0.5;
+      ctx.moveTo(px, py); ctx.lineTo(px + T, py);
+      ctx.moveTo(px, py); ctx.lineTo(px, py + T);
+    }
+    ctx.stroke();
+  }
+
   function drawRives(ctx, g, viewer) {
     const L = g.L, d = g.dyn, me = S.roleOf(g, viewer), t = g.t;
     for (let y = 0; y < L.h; y++) for (let x = 0; x < L.w; x++) {
@@ -185,6 +199,7 @@
       else if (ch === 'X') exitMark(ctx, px, py, t);
       else ground(ctx, px, py);
     }
+    grid(ctx, L, 0, L.h);
     for (const z of L.rockfalls) {
       const seesHazard = L.river ? L.bankOf(z.x) !== me : false;
       if (seesHazard) rockfallZone(ctx, z, t, S.rockfallActive(t, z));
@@ -232,6 +247,7 @@
       if (ch === 'C') { ctx.strokeStyle = COL.ink; ctx.setLineDash([6, 6]); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(px, py + T / 2); ctx.lineTo(px + T, py + T / 2); ctx.stroke(); ctx.setLineDash([]); }
       if (ch === 'X') { ctx.strokeStyle = COL.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(px, py + 10); ctx.lineTo(px + T, py + 10); ctx.moveTo(px, py + 18); ctx.lineTo(px + T, py + 18); ctx.stroke(); }
     }
+    grid(ctx, L, y0, y1);
     // courant : traits qui défilent
     if (L.current > 0) {
       ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 1;
@@ -320,6 +336,7 @@
         }
       } else ground(ctx, px, py);
     }
+    grid(ctx, L, 0, L.h);
     // sables mouvants : Guetteur seulement (et révélation)
     if (me === 'guetteur') for (const q of L.quicksand) {
       const rc = S.quicksandRect(q, t);
