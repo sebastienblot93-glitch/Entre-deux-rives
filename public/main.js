@@ -160,7 +160,10 @@
     const L = g.L, r = Sim.roleOf(g, myIndex());
     $('hud-act').textContent = L.act;
     $('hud-title').textContent = L.title;
-    $('hud-role').textContent = ROLE_TEXT[r] || r;
+    const me = myIndex() === 0 ? 'Vous êtes orange' : 'Vous êtes bleu';
+    $('hud-role').textContent = me + ' · ' + (ROLE_TEXT[r] || r);
+    const goal = (g.seq[g.li] && g.seq[g.li].goal) || '';
+    if ($('hint').textContent !== goal) $('hint').textContent = goal;
     let extra = 'Fragment ' + (g.li + 1) + ' / ' + g.seq.length;
     if (L.mode === 'radeau') extra += ' · planches ' + g.dyn.raft.planks + ' / ' + Sim.C.PLANKS + ' · fragments ' + g.dyn.collected.length + ' / ' + L.fragments.length;
     if (L.mode === 'rives' && L.order) extra += ' · ordre ' + g.dyn.progress + ' / ' + L.order.length;

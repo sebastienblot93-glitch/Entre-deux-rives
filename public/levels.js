@@ -543,23 +543,23 @@
   /* ---------------------------------------------------------------- */
 
   const sequence = [
-    { act: 'Prologue', title: 'Le Serment du silence', mode: 'rives', level: 'serment', intro: 'Posez tous deux la main sur la pierre.' },
+    { act: 'Prologue', title: 'Le Serment du silence', mode: 'rives', level: 'serment', goal: 'Amenez vos deux personnages sur les 4 cercles du centre. Chacun ne bouge que le sien.', intro: 'Posez tous deux la main sur la pierre.' },
 
-    { act: 'Acte 1 · Les Deux Rives', title: 'Le Gué', mode: 'rives', level: 'rives1', intro: 'Deux leviers de même numéro, tirés ensemble, ouvrent une porte.' },
-    { act: 'Acte 1 · Les Deux Rives', title: 'Le Miroir', mode: 'rives', level: 'rives2', intro: 'Vous voyez les pièges de la rive d’en face, jamais les vôtres.' },
-    { act: 'Acte 1 · Les Deux Rives', title: 'Le Pont-Levis', mode: 'rives', level: 'rives3', intro: 'Trois paires, dans l’ordre. Puis un pont qui ne tient qu’au même pas.' },
+    { act: 'Acte 1 · Les Deux Rives', title: 'Le Gué', mode: 'rives', level: 'rives1', goal: 'Tirez en même temps (Espace) les deux leviers de même numéro, un sur chaque rive : la porte s’ouvre. Puis allez chacun sur le cercle de sortie de votre rive.', intro: 'Deux leviers de même numéro, tirés ensemble, ouvrent une porte.' },
+    { act: 'Acte 1 · Les Deux Rives', title: 'Le Miroir', mode: 'rives', level: 'rives2', goal: 'Votre rive cache des dalles fragiles que seul votre partenaire voit. Montrez-lui le chemin sûr en marchant dessus côté d’en face, puis rejoignez la sortie.', intro: 'Vous voyez les pièges de la rive d’en face, jamais les vôtres.' },
+    { act: 'Acte 1 · Les Deux Rives', title: 'Le Pont-Levis', mode: 'rives', level: 'rives3', goal: 'Tirez les paires de leviers dans l’ordre 1, 2, 3. Sur le pont de corde, avancez à la même hauteur que votre partenaire.', intro: 'Trois paires, dans l’ordre. Puis un pont qui ne tient qu’au même pas.' },
 
-    { act: 'Acte 2 · Le Radeau', title: 'Le Slalom', mode: 'radeau', level: 'radeau1', intro: 'Un radeau, deux perches : l’un tient le cap, l’autre la vitesse.' },
-    { act: 'Acte 2 · Le Radeau', title: 'Les Passes', mode: 'radeau', level: 'radeau2', intro: 'Le courant ne s’arrête plus.' },
-    { act: 'Acte 2 · Le Radeau', title: 'La Cascade', mode: 'radeau', level: 'radeau3', intro: 'Attrapez les fragments au passage.' },
+    { act: 'Acte 2 · Le Radeau', title: 'Le Slalom', mode: 'radeau', level: 'radeau1', goal: 'Barreur : gauche/droite pour éviter les rochers. Perchiste : bas pour avancer, haut pour freiner, et évitez tourbillons et bancs de sable. Atteignez la ligne d’arrivée.', intro: 'Un radeau, deux perches : l’un tient le cap, l’autre la vitesse.' },
+    { act: 'Acte 2 · Le Radeau', title: 'Les Passes', mode: 'radeau', level: 'radeau2', goal: 'Même chose, mais le courant pousse sans arrêt. Le Barreur voit les rochers, le Perchiste les tourbillons.', intro: 'Le courant ne s’arrête plus.' },
+    { act: 'Acte 2 · Le Radeau', title: 'La Cascade', mode: 'radeau', level: 'radeau3', goal: 'Ramassez les fragments de carte en passant dessus, puis atteignez la ligne d’arrivée.', intro: 'Attrapez les fragments au passage.' },
 
-    { act: 'Acte 3 · Les Traces', title: 'La Brume', mode: 'traces', level: 'traces1', intro: 'Le Guetteur ne voit que des empreintes. Le Marcheur ne voit que ses pieds.' },
-    { act: 'Acte 3 · Les Traces', title: 'Les Roseaux', mode: 'traces', level: 'traces2', intro: 'Certaines passerelles sont verrouillées. La clé est dans les roseaux.' },
-    { act: 'Acte 3 · Les Traces', title: 'Le Phare de l’estuaire', mode: 'traces', level: 'traces3', intro: 'La marée monte dans les chenaux.' },
+    { act: 'Acte 3 · Les Traces', title: 'La Brume', mode: 'traces', level: 'traces1', goal: 'Guetteur : déplacez le curseur et appuyez sur Espace pour basculer les passerelles. Marcheur : avancez dans la brume jusqu’à la sortie.', intro: 'Le Guetteur ne voit que des empreintes. Le Marcheur ne voit que ses pieds.' },
+    { act: 'Acte 3 · Les Traces', title: 'Les Roseaux', mode: 'traces', level: 'traces2', goal: 'Une passerelle est verrouillée : le Marcheur doit se tenir sur l’interrupteur caché dans les roseaux pendant que le Guetteur la bascule.', intro: 'Certaines passerelles sont verrouillées. La clé est dans les roseaux.' },
+    { act: 'Acte 3 · Les Traces', title: 'Le Phare de l’estuaire', mode: 'traces', level: 'traces3', goal: 'Le Guetteur ouvre et ferme les vannes pour que la marée n’inonde pas le chenal du Marcheur. Lui seul voit les sables mouvants.', intro: 'La marée monte dans les chenaux.' },
 
-    { act: 'Finale · L’Estuaire', title: 'Les rives de l’estuaire', mode: 'rives', level: 'estuaireRives', swap: true, intro: 'Rives inversées.' },
-    { act: 'Finale · L’Estuaire', title: 'La traversée', mode: 'radeau', level: 'estuaireRadeau', swap: true, intro: 'Perches échangées.' },
-    { act: 'Finale · L’Estuaire', title: 'La dernière pierre', mode: 'traces', level: 'estuaireTraces', swap: true, intro: 'Celui qui marchait monte au phare.' },
+    { act: 'Finale · L’Estuaire', title: 'Les rives de l’estuaire', mode: 'rives', level: 'estuaireRives', goal: 'Comme l’acte 1, rives inversées : leviers ensemble, éboulis visibles d’en face, pont au même pas.', swap: true, intro: 'Rives inversées.' },
+    { act: 'Finale · L’Estuaire', title: 'La traversée', mode: 'radeau', level: 'estuaireRadeau', goal: 'Comme l’acte 2, rôles échangés : le Barreur devient Perchiste et inversement.', swap: true, intro: 'Perches échangées.' },
+    { act: 'Finale · L’Estuaire', title: 'La dernière pierre', mode: 'traces', level: 'estuaireTraces', goal: 'Comme l’acte 3, rôles échangés : celui qui marchait guide depuis le phare.', swap: true, intro: 'Celui qui marchait monte au phare.' },
   ];
 
   return { maps, sequence };
