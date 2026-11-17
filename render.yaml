@@ -5,6 +5,7 @@ services:
     name: entre-deux-rives
     runtime: node
     plan: free
+    region: frankfurt
     buildCommand: ""
     startCommand: node server.js
     healthCheckPath: /health
